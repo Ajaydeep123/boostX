@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  firstName     String?
+  lastName      String?
+  username      String         @unique
+  email         String         @unique
+  password      String?
+  avatar        String?
+  role          Role           @default(USER)
+  website       String?
+  oauthAccounts OAuthAccount[]
+  isAwsLinked   Boolean        @default(false)
+  sessions      Session[]
+  account       Account[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model OAuthAccount {
+  id             String       @id @default(cuid())
+  userId         String
+  provider       ProviderType
+  providerUserId String
+  accessToken    String
+  refreshToken   String?
+  expiresAt      DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([provider, providerUserId])
+  @@map("oauth_accounts")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                        String   @id @default(uuid())
+  externalId                String  
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+  accountType               String   @default("AWS")
+  assumeRoleArn             String
+  awsAccountId              String
+  userId                    String
+  user                      User     @relation(fields: [userId], references: [id])
+  previousMonthActualCost   Float?
+  previousMonthOriginalCost Float?
+  isSellerRegistered        Boolean  @default(false)
+  roleType                  RoleType   @default(READONLY)
+  costFetchingState         String?
+}
+
+enum ProviderType {
+  GOOGLE
+  DISCORD
+  GITHUB
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum RoleType {
+  READONLY
+  FULLACCESS
+}
